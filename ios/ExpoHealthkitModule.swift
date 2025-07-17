@@ -20,6 +20,7 @@ public class ExpoHealthkitModule: Module {
   private var backgroundSyncEnabled: Bool = false
   private var lastSyncTimestamp: String?
   private var backgroundTaskHandlerRegistered: Bool = false
+  private var currentBackgroundTaskSemaphore: DispatchSemaphore?
 
   // List of supported HealthKit identifiers (extensible)
   let quantityTypeIdentifiers: [String] = [
@@ -161,7 +162,7 @@ public class ExpoHealthkitModule: Module {
     ])
 
     // Defines event names that the module can send to JavaScript.
-    Events("onChange", "onHealthDataChange", "onBackgroundSyncComplete")
+    Events("onChange", "onHealthDataChange", "onBackgroundSyncComplete", "onBackgroundSyncTrigger")
 
     // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
     Function("hello") {
@@ -678,35 +679,68 @@ public class ExpoHealthkitModule: Module {
 
   // Handle the background refresh issued by the system
   private func handleBackgroundRefresh(task: BGAppRefreshTask) {
-    scheduleBackgroundHealthSync() // Schedule the next one early
-
-    // Perform lightweight work and then call JS side for heavy processing
-    let queue = OperationQueue()
-
-    queue.maxConcurrentOperationCount = 1
-
-    let operation = BlockOperation {
-      // Placeholder: we could perform small checks here; heavy work should be done via JS bridge
-      self.lastSyncTimestamp = self.isoFormatter.string(from: Date())
-
-      // Emit background sync completion event
-      self.sendEvent("onBackgroundSyncComplete", [
-        "success": true,
-        "syncedDataTypes": [], // Would be populated with actual synced types
-        "timestamp": self.lastSyncTimestamp ?? self.isoFormatter.string(from: Date()),
-        "error": NSNull()
-      ])
-    }
-
+    healthkitLogger.info("🔄 Background refresh task started")
+    
+    // Schedule the next sync early
+    scheduleBackgroundHealthSync()
+    
+    // Create a background task semaphore to keep the task alive
+    let taskSemaphore = DispatchSemaphore(value: 0)
+    self.currentBackgroundTaskSemaphore = taskSemaphore
+    var taskCompleted = false
+    
+    // Set up expiration handler
     task.expirationHandler = {
-      queue.cancelAllOperations()
+      healthkitLogger.warning("⚠️ Background task expiring")
+      taskCompleted = true
+      taskSemaphore.signal()
     }
-
-    operation.completionBlock = {
-      task.setTaskCompleted(success: !operation.isCancelled)
+    
+    // Emit event to trigger JS background sync
+    healthkitLogger.info("📤 Emitting onBackgroundSyncTrigger event")
+    self.sendEvent("onBackgroundSyncTrigger", [
+      "timestamp": self.isoFormatter.string(from: Date()),
+      "taskIdentifier": self.backgroundTaskIdentifier
+    ])
+    
+    // Wait for JS to complete sync (with timeout)
+    DispatchQueue.global(qos: .background).async {
+      // Wait for up to 25 seconds (iOS gives us ~30 seconds)
+      let timeout = DispatchTime.now() + .seconds(25)
+      let result = taskSemaphore.wait(timeout: timeout)
+      
+      if result == .timedOut {
+        healthkitLogger.warning("⏱️ Background sync timed out")
+      }
+      
+      // Mark task as completed
+      task.setTaskCompleted(success: !taskCompleted)
+      healthkitLogger.info("✅ Background task completed")
+      
+      // Clear the semaphore reference
+      self.currentBackgroundTaskSemaphore = nil
     }
-
-    queue.addOperation(operation)
+    
+    // Store last sync timestamp
+    self.lastSyncTimestamp = self.isoFormatter.string(from: Date())
+  }
+  
+  // Add a method to notify native that JS sync is complete
+  AsyncFunction("notifyBackgroundSyncComplete") { (success: Bool) in
+    healthkitLogger.info("📥 JS notified background sync complete: \(success)")
+    
+    // Signal the waiting background task
+    if let semaphore = self.currentBackgroundTaskSemaphore {
+      semaphore.signal()
+      healthkitLogger.info("📤 Signaled background task completion")
+    }
+    
+    // Emit completion event for monitoring
+    self.sendEvent("onBackgroundSyncComplete", [
+      "success": success,
+      "timestamp": self.isoFormatter.string(from: Date()),
+      "error": NSNull()
+    ])
   }
 }
 

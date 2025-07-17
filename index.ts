@@ -15,7 +15,7 @@ import NativeModule, {
 
 export { default } from "./src/ExpoHealthkitModule";
 export * from "./src/ExpoHealthkitModule.types";
-export { default as ExpoHealthkitModuleView } from "./src/ExpoHealthkitModuleView";
+// export { default as ExpoHealthkitModuleView } from "./src/ExpoHealthkitModuleView";
 
 // Cross-platform identifier mapping with type safety
 const IDENTIFIER_MAPPING: Record<string, { ios: HealthDataType; android: string }> = {
@@ -254,6 +254,17 @@ export async function disableBackgroundSync(): Promise<BackgroundSyncResult> {
       success: false,
       error: "Background sync is only available on iOS and Android.",
     };
+  }
+}
+
+export async function notifyBackgroundSyncComplete(success: boolean): Promise<void> {
+  if (Platform.OS === "ios") {
+    return NativeModule.notifyBackgroundSyncComplete(success);
+  } else if (Platform.OS === "android") {
+    // TODO: Implement Android notification
+    return Promise.resolve();
+  } else {
+    return Promise.resolve();
   }
 }
 
