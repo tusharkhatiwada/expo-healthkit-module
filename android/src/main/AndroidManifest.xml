@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Health Connect Read Permissions -->
+  <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+  <uses-permission android:name="android.permission.health.READ_BASAL_METABOLIC_RATE"/>
+  <uses-permission android:name="android.permission.health.READ_BODY_FAT"/>
+  <uses-permission android:name="android.permission.health.READ_CYCLING_PEDALING_CADENCE"/>
+  <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
+  <uses-permission android:name="android.permission.health.READ_ELEVATION_GAINED"/>
+  <uses-permission android:name="android.permission.health.READ_EXERCISE"/>
+  <uses-permission android:name="android.permission.health.READ_FLOORS_CLIMBED"/>
+  <uses-permission android:name="android.permission.health.READ_HEART_RATE"/>
+  <uses-permission android:name="android.permission.health.READ_LEAN_BODY_MASS"/>
+  <uses-permission android:name="android.permission.health.READ_OXYGEN_SATURATION"/>
+  <uses-permission android:name="android.permission.health.READ_RESPIRATORY_RATE"/>
+  <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE"/>
+  <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+  <uses-permission android:name="android.permission.health.READ_SPEED"/>
+  <uses-permission android:name="android.permission.health.READ_STEPS_CADENCE"/>
+  <uses-permission android:name="android.permission.health.READ_STEPS"/>
+  <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
+  <uses-permission android:name="android.permission.health.READ_VO2_MAX"/>
+
+  <!-- Background Sync Permissions -->
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
+  <queries>
+    <package android:name="com.google.android.apps.healthdata" />
+  </queries>
+</manifest>
